@@ -129,9 +129,9 @@ export function MapView({ issues, onIssueSelect, selectedIssue, manualMode = fal
         marker.on("click", () => onIssueSelect(issue))
         
         // Create enhanced popup with image support
-        const imageHtml = (issue as any).image 
+        const imageHtml = issue.photo 
           ? `<div style="text-align: center; margin-bottom: 8px;">
-               <img src="${(issue as any).image}" alt="Issue photo" style="max-width: 200px; max-height: 150px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+               <img src="${issue.photo}" alt="Issue photo" style="max-width: 200px; max-height: 150px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
              </div>` 
           : ''
         

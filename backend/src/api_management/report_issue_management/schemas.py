@@ -1,6 +1,13 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
+
+class PhotoOut(BaseModel):
+    id: int
+    photo_url: str
+
+    class Config:
+        from_attributes = True
 
 class IssueCreate(BaseModel):
     user_id: int
@@ -20,6 +27,7 @@ class IssueOut(BaseModel):
     longitude: float
     status: str
     created_at: datetime
+    photos: List[PhotoOut] = []
 
     class Config:
         from_attributes = True

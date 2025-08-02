@@ -18,7 +18,7 @@ export async function fetchIssues() {
     author: "Community Member", // Default since API doesn't provide this
     createdAt: item.created_at,
     votes: 0, // Default since API doesn't provide this
-    photo: item.photo_url || undefined,
+    photo: item.photos && item.photos.length > 0 ? item.photos[0].photo_url : undefined,
     comments: [], // Default empty array
     history: [{
       status: item.status.toLowerCase(),
