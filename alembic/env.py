@@ -2,13 +2,17 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 
-# Import your models
-from backend.src.database.database import Base  # wherever your Base is defined
-from src.models import users, issues  # import your tables
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+from backend.src.database.database import Base
+from backend.src.database.models import User, Issue, IssuePhoto, StatusLog, BannedUser, Flag
 
 config = context.config
 fileConfig(config.config_file_name)
 target_metadata = Base.metadata
+
 
 
 # other values from the config, defined by the needs of env.py,
