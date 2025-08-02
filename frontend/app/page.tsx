@@ -118,7 +118,7 @@ export default function CivicTrack() {
               </div>
               {/* Issue card */}
               <div className="flex-1 overflow-y-auto">
-                <IssueCard issue={selectedIssue} />
+                <IssueCard issue={selectedIssue} onClose={handleCloseIssue} onVote={() => {}} />
               </div>
             </div>
           ) : (

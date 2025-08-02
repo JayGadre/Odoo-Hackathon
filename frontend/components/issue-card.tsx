@@ -11,13 +11,13 @@ import type { Issue } from "@/lib/mock-data"
 
 interface IssueCardProps {
   issue: Issue
-  onClose: () => void
-  onVote: (issueId: string) => void
+  onClose?: () => void
+  onVote?: (issueId: string) => void
 }
 
 export function IssueCard({ issue, onClose, onVote }: IssueCardProps) {
   const [newComment, setNewComment] = useState("")
-  const [comments, setComments] = useState(issue.comments)
+  const [comments, setComments] = useState(issue.comments || [])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -77,7 +77,7 @@ export function IssueCard({ issue, onClose, onVote }: IssueCardProps) {
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button variant="ghost" size="icon" onClick={onClose || (() => {})}>
             <X className="w-4 h-4" />
           </Button>
         </CardHeader>
@@ -90,7 +90,7 @@ export function IssueCard({ issue, onClose, onVote }: IssueCardProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onVote(issue.id)}
+                onClick={() => onVote?.(issue.id)}
                 className="flex items-center space-x-1"
               >
                 <ThumbsUp className="w-4 h-4" />
@@ -120,7 +120,7 @@ export function IssueCard({ issue, onClose, onVote }: IssueCardProps) {
           <div>
             <h3 className="font-semibold mb-3">Status History</h3>
             <div className="space-y-3">
-              {issue.history.map((entry, index) => (
+              {(issue.history || []).map((entry, index) => (
                 <div key={index} className="flex items-start space-x-3">
                   <div
                     className={`w-3 h-3 rounded-full mt-1 ${
