@@ -1,20 +1,28 @@
 from backend.src.utils.config import settings
-from backend.src.api import auth
-from backend.src.api import report_issue_api
+from backend.src.api import auth, report_issue_api
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-app = FastAPI()
+from starlette.middleware.sessions import SessionMiddleware
 
-# Allow requests from any origin (during development)
+app = FastAPI(title=settings.PROJECT_NAME)
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Replace with specific origins in production, e.g. ["http://localhost:3000"]
+    allow_origins=["*"],  # change in prod
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all HTTP methods: GET, POST, PUT, etc.
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Routes
-#app.include_router(auth.router, prefix="/auth", tags=["auth"])
+# Sessions for Google OAuth
+app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 
+# Welcome route
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to CivicTrack API. Go to /docs for Swagger UI."}
+
+# Routes
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(report_issue_api.router, prefix="/report", tags=["report"])
