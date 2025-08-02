@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Black">
+    <option name="sdkName" value="Python 3.13 (etl-orchestrator)" />
+  </component>
+  <component name="GithubDefaultAccount">
+    <option name="defaultAccountId" value="5288233f-b7cb-4a87-ae5c-c0e24bb9cd55" />
+  </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.13 (etl-orchestrator)" project-jdk-type="Python SDK" />
+</project>
