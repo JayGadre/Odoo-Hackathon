@@ -10,7 +10,7 @@ export async function fetchIssues() {
     title: item.title,
     description: item.description,
     category: item.category,
-    status: item.status.toLowerCase(),
+    status: item.status, // Keep original status (don't convert to lowercase)
     location: {
       lat: item.latitude,
       lng: item.longitude
@@ -21,7 +21,7 @@ export async function fetchIssues() {
     photo: item.photos && item.photos.length > 0 ? item.photos[0].photo_url : undefined,
     comments: [], // Default empty array
     history: [{
-      status: item.status.toLowerCase(),
+      status: item.status, // Keep original status here too
       timestamp: item.created_at,
       note: "Issue reported by community member"
     }]
