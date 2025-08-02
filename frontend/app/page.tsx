@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { MapPin, Users } from "lucide-react"
 import { MapView } from "@/components/map-view"
 import { IssueForm } from "@/components/issue-form"
@@ -19,7 +20,7 @@ export const mockIssues: Issue[] = [
     status: "reported",
     createdAt: new Date().toISOString(),
     latitude: 28.6139,
-    longitude: 77.2090,
+    longitude: 77.209,
     votes: 0,
     comments: [],
     history: [
@@ -94,10 +95,17 @@ export default function CivicTrack() {
             </div>
             <h1 className="text-xl font-bold text-gray-800">CivicTrack</h1>
           </div>
-          <Badge variant="secondary" className="hidden sm:flex">
-            <Users className="w-3 h-3 mr-1" />
-            {issues.length} Issues
-          </Badge>
+
+          {/* ✅ Fixed Link + Badge + Icon */}
+          <Link href="/issues">
+            <Badge
+              variant="secondary"
+              className="hidden sm:flex cursor-pointer hover:bg-gray-200 transition"
+            >
+              <Users className="w-3 h-3 mr-1" />
+              {issues.length} Issues
+            </Badge>
+          </Link>
         </div>
       </header>
 

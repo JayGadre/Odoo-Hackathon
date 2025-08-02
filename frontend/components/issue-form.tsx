@@ -15,7 +15,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { Issue } from "@/types/issue"
 
-// ✅ Correct type for form data
+
 type IssueFormFields = Omit<Issue, "id" | "createdAt" | "votes" | "comments" | "history">
 
 type IssueFormProps = {
@@ -32,8 +32,10 @@ export function IssueForm({ onSubmit }: IssueFormProps) {
     latitude: 0,
     longitude: 0,
     status: "reported",
+    imageUrl: "",
   })
 
+  const [imagePreview, setImagePreview] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const categories = [
@@ -46,7 +48,7 @@ export function IssueForm({ onSubmit }: IssueFormProps) {
     "Other",
   ]
 
-  // ✅ Fetch live location on mount
+ 
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -144,6 +146,32 @@ export function IssueForm({ onSubmit }: IssueFormProps) {
           </Select>
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="image">Upload Image</Label>
+          <Input
+            id="image"
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (!file) return
+              const reader = new FileReader()
+              reader.onloadend = () => {
+                setFormData((prev) => ({
+                  ...prev,
+                  imageUrl: reader.result as string,}))
+                
+                
+                setImagePreview(reader.result as string)
+                
+              }
+              reader.readAsDataURL(file)
+            }}
+          />
+          {imagePreview && (
+            <img src={imagePreview} alt="Preview" className="mt-2 max-h-40 object-cover rounded" />
+          )}
+        </div>
         <div className="space-y-2">
           <Label htmlFor="description">Description *</Label>
           <Textarea
