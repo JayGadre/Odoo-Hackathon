@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { fetchIssues, createIssue } from "@/lib/api"
+import { getCurrentLocation, isWithinAllowedRadius } from "@/lib/geolocation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -13,16 +15,18 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Card } from "@/components/ui/card"
-import { MapPin, Camera, Upload } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { MapPin, Camera, Upload, AlertTriangle } from "lucide-react"
 import type { Issue } from "@/lib/mock-data"
 
 interface IssueFormProps {
-  onSubmit: (
-    issue: Omit<Issue, "id" | "createdAt" | "votes" | "comments" | "history">
-  ) => void
+  onSubmit: () => void
+  locationMode: 'auto' | 'manual'
+  setLocationMode: (mode: 'auto' | 'manual') => void
+  manualLocation: { lat: number; lng: number } | null
 }
 
-export function IssueForm({ onSubmit }: IssueFormProps) {
+export function IssueForm({ onSubmit, locationMode, setLocationMode, manualLocation }: IssueFormProps) {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -33,10 +37,12 @@ export function IssueForm({ onSubmit }: IssueFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [locationStatus, setLocationStatus] =
     useState<"idle" | "loading" | "success" | "error">("idle")
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null)
+  const [locationError, setLocationError] = useState<string>("")
 
   const categories = [
     "Road Maintenance",
-    "Street Lighting",
+    "Street Lighting", 
     "Waste Management",
     "Parks & Recreation",
     "Public Safety",
@@ -44,27 +50,50 @@ export function IssueForm({ onSubmit }: IssueFormProps) {
     "Other",
   ]
 
+  // Get user's location on component mount
+  useEffect(() => {
+    getCurrentLocation()
+      .then((location) => {
+        setUserLocation(location)
+        setFormData(prev => ({ ...prev, location }))
+      })
+      .catch((error) => {
+        console.error('Error getting user location:', error)
+      })
+  }, [])
+
   const handleGetLocation = () => {
     setLocationStatus("loading")
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setFormData((prev) => ({
-            ...prev,
-            location: {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            },
-          }))
-          setLocationStatus("success")
-        },
-        () => {
-          setLocationStatus("error")
-        }
-      )
-    } else {
-      setLocationStatus("error")
+    setLocationError("")
+    
+    getCurrentLocation()
+      .then((location) => {
+        setUserLocation(location)
+        setFormData((prev) => ({
+          ...prev,
+          location
+        }))
+        setLocationStatus("success")
+      })
+      .catch((error) => {
+        setLocationStatus("error")
+        setLocationError("Unable to get your location. Please try again or use manual location.")
+      })
+  }
+
+  const validateLocation = (lat: number, lng: number): boolean => {
+    if (!userLocation) {
+      setLocationError("Please enable location access to submit issues.")
+      return false
     }
+
+    if (!isWithinAllowedRadius(userLocation.lat, userLocation.lng, lat, lng, 5)) {
+      setLocationError("You can only report issues within 5km of your current location.")
+      return false
+    }
+
+    setLocationError("")
+    return true
   }
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,25 +103,50 @@ export function IssueForm({ onSubmit }: IssueFormProps) {
     }
   }
 
+  // Update form location from manual map slider
+  useEffect(() => {
+    if (locationMode === 'manual' && manualLocation) {
+      setFormData(prev => ({ ...prev, location: manualLocation }))
+      // Validate the manual location
+      validateLocation(manualLocation.lat, manualLocation.lng)
+    }
+  }, [locationMode, manualLocation, userLocation])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-
-    await new Promise((res) => setTimeout(res, 1000))
-
-    const issue = {
-      title: formData.title,
-      description: formData.description,
-      category: formData.category,
-      location: formData.location,
-      status: "reported" as const,
-      author: "Anonymous User",
-      photo: formData.photo
-        ? URL.createObjectURL(formData.photo)
-        : undefined,
+    
+    // Validate location before submission
+    if (!validateLocation(formData.location.lat, formData.location.lng)) {
+      setIsSubmitting(false)
+      return
     }
 
-    onSubmit(issue)
+    try {
+      // Prepare data for backend
+      const payload = {
+        user_id: 1, // TODO: Replace with real user if available
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        latitude: formData.location.lat,
+        longitude: formData.location.lng,
+      }
+      await createIssue(payload)
+      
+      // Reset form
+      setFormData({
+        title: "",
+        description: "",
+        category: "",
+        photo: null,
+        location: userLocation || { lat: 37.7749, lng: -122.4194 },
+      })
+      
+      onSubmit()
+    } catch (err) {
+      setLocationError("Failed to submit issue. Please try again.")
+    }
     setIsSubmitting(false)
   }
 
@@ -192,24 +246,75 @@ export function IssueForm({ onSubmit }: IssueFormProps) {
 
         <div className="space-y-2">
           <Label>Location</Label>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleGetLocation}
-            disabled={locationStatus === "loading"}
-            className="w-full"
-          >
-            <MapPin className="w-4 h-4 mr-2" />
-            {{
-              idle: "Use my current location",
-              loading: "Getting location...",
-              success: "Location captured ✓",
-              error: "Location failed - using default",
-            }[locationStatus]}
-          </Button>
-          <p className="text-xs text-gray-500">
-            We'll use your location to help others find and address the issue.
-          </p>
+          <div className="flex gap-2 mb-2">
+            <Button
+              type="button"
+              variant={locationMode === 'auto' ? 'default' : 'outline'}
+              onClick={() => {
+                setLocationMode('auto');
+                handleGetLocation();
+              }}
+            >
+              Use my location
+            </Button>
+            <Button
+              type="button"
+              variant={locationMode === 'manual' ? 'default' : 'outline'}
+              onClick={() => setLocationMode('manual')}
+            >
+              Select on map
+            </Button>
+          </div>
+
+          {locationError && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>{locationError}</AlertDescription>
+            </Alert>
+          )}
+
+          {locationMode === 'auto' ? (
+            <div>
+              <p className="text-xs text-gray-500 mb-1">
+                You can only report issues within 5km of your current location.
+              </p>
+              <div className="text-xs text-gray-700">
+                Lat: {formData.location.lat.toFixed(5)}, Lng: {formData.location.lng.toFixed(5)}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-gray-500 mb-1">
+                Use the map to select a location within 5km of your current position.
+              </p>
+              <Label htmlFor="lat">Latitude</Label>
+              <Input
+                id="lat"
+                type="number"
+                step="0.00001"
+                value={formData.location.lat}
+                onChange={e => {
+                  const lat = parseFloat(e.target.value)
+                  setFormData(prev => ({ ...prev, location: { ...prev.location, lat } }))
+                  validateLocation(lat, formData.location.lng)
+                }}
+                required
+              />
+              <Label htmlFor="lng">Longitude</Label>
+              <Input
+                id="lng"
+                type="number"
+                step="0.00001"
+                value={formData.location.lng}
+                onChange={e => {
+                  const lng = parseFloat(e.target.value)
+                  setFormData(prev => ({ ...prev, location: { ...prev.location, lng } }))
+                  validateLocation(formData.location.lat, lng)
+                }}
+                required
+              />
+            </div>
+          )}
         </div>
 
         <Button
@@ -218,7 +323,8 @@ export function IssueForm({ onSubmit }: IssueFormProps) {
             isSubmitting ||
             !formData.title ||
             !formData.description ||
-            !formData.category
+            !formData.category ||
+            !!locationError
           }
           className="w-full bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600"
         >

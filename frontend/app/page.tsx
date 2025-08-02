@@ -1,24 +1,32 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { MapPin, Users } from "lucide-react"
+import { MapPin, Users, X } from "lucide-react"
 import { MapView } from "@/components/map-view"
 import { IssueForm } from "@/components/issue-form"
 import { FilterSidebar } from "@/components/filter-sidebar"
-import { mockIssues, type Issue } from "@/lib/mock-data"
+import { IssueCard } from "@/components/issue-card"
+import { type Issue } from "@/lib/mock-data"
+import { fetchIssues } from "@/lib/api"
 import { toast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 
 export default function CivicTrack() {
-  const [issues, setIssues] = useState<Issue[]>(mockIssues)
-  const [filteredIssues, setFilteredIssues] = useState<Issue[]>(mockIssues)
+  const [issues, setIssues] = useState<Issue[]>([])
+  const [filteredIssues, setFilteredIssues] = useState<Issue[]>([])
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [filters, setFilters] = useState({
     category: "",
     status: "",
     search: "",
-    distance: 5,
+    
   })
+
+  // Load issues from backend
+  useEffect(() => {
+    fetchIssues().then(setIssues).catch(() => setIssues([]))
+  }, [])
 
   useEffect(() => {
     let filtered = issues
@@ -33,30 +41,23 @@ export default function CivicTrack() {
     setFilteredIssues(filtered)
   }, [issues, filters])
 
-  const handleSubmitIssue = (
-    newIssue: Omit<Issue, "id" | "createdAt" | "votes" | "comments" | "history">
-  ) => {
-    const issue: Issue = {
-      ...newIssue,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      votes: 0,
-      comments: [],
-      history: [
-        {
-          status: "reported",
-          timestamp: new Date().toISOString(),
-          note: "Issue reported",
-        },
-      ],
-    }
+  // Manual location state for map slider
+  const [manualLocation, setManualLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [locationMode, setLocationMode] = useState<'auto' | 'manual'>("auto")
 
-    setIssues((prev) => [issue, ...prev])
+  // After submit, reload issues from backend
+  const handleSubmitIssue = async () => {
+    await fetchIssues().then(setIssues).catch(() => setIssues([]))
     toast({
-      title: "🎉 Issue Submitted!",
+      title: "�� Issue Submitted!",
       description: "Badge earned: Community Reporter",
       duration: 4000,
     })
+  }
+
+  // Close selected issue
+  const handleCloseIssue = () => {
+    setSelectedIssue(null)
   }
 
   return (
@@ -94,12 +95,40 @@ export default function CivicTrack() {
             issues={filteredIssues}
             onIssueSelect={setSelectedIssue}
             selectedIssue={selectedIssue}
+            manualMode={locationMode === 'manual'}
+            onManualLocationSelect={(lat, lng) => setManualLocation({ lat, lng })}
           />
         </section>
 
-        {/* Right: Issue Form */}
+        {/* Right: Issue Form or Selected Issue */}
         <aside className="w-1/4 bg-white border-l overflow-y-auto">
-          <IssueForm onSubmit={handleSubmitIssue} />
+          {selectedIssue ? (
+            <div className="h-full flex flex-col">
+              {/* Close button */}
+              <div className="p-4 border-b flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Issue Details</h2>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleCloseIssue}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              {/* Issue card */}
+              <div className="flex-1 overflow-y-auto">
+                <IssueCard issue={selectedIssue} />
+              </div>
+            </div>
+          ) : (
+            <IssueForm
+              onSubmit={handleSubmitIssue}
+              locationMode={locationMode}
+              setLocationMode={setLocationMode}
+              manualLocation={manualLocation}
+            />
+          )}
         </aside>
       </main>
     </div>

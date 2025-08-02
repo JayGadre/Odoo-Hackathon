@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Slider } from "@/components/ui/slider"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Search, Filter, X, MapPin } from "lucide-react"
@@ -35,9 +35,9 @@ export function FilterSidebar({ filters, onFiltersChange, issueCount }: FilterSi
   ]
 
   const statuses = [
-    { value: "reported", label: "Reported", color: "bg-orange-500" },
-    { value: "in-progress", label: "In Progress", color: "bg-blue-500" },
-    { value: "resolved", label: "Resolved", color: "bg-green-500" },
+    { value: "Reported", label: "Reported", color: "bg-orange-500" },
+    { value: "In Progress", label: "In Progress", color: "bg-blue-500" },
+    { value: "Resolved", label: "Resolved", color: "bg-green-500" },
   ]
 
   const handleFilterChange = (key: string, value: any) => {
@@ -163,24 +163,6 @@ export function FilterSidebar({ filters, onFiltersChange, issueCount }: FilterSi
           </div>
         </div>
 
-        {/* Distance Filter */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Distance: {filters.distance} miles</Label>
-          <div className="px-2">
-            <Slider
-              value={[filters.distance]}
-              onValueChange={(value) => handleFilterChange("distance", value[0])}
-              max={25}
-              min={1}
-              step={1}
-              className="w-full"
-            />
-          </div>
-          <div className="flex justify-between text-xs text-gray-500">
-            <span>1 mile</span>
-            <span>25 miles</span>
-          </div>
-        </div>
       </div>
 
       {/* Quick Stats */}
@@ -193,7 +175,7 @@ export function FilterSidebar({ filters, onFiltersChange, issueCount }: FilterSi
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <p className="text-xs text-gray-600">Showing issues within {filters.distance} miles of your location</p>
+            <p className="text-xs text-gray-600">Showing issues in your area</p>
           </CardContent>
         </Card>
       </div>

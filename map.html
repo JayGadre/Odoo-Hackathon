@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>5km Radius Around My Location</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    body { margin: 0; }
+    #map { height: 100vh; width: 100vw; }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+  // Initialize map at dummy location until we get actual location
+  const map = L.map('map').setView([20.5937, 78.9629], 5); // Default: center of India
+
+  // Add OSM tile layer
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Get user's current location
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition((position) => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+
+      // Move map to user's location
+      map.setView([lat, lon], 14);
+
+      // Add marker at user's location
+      L.marker([lat, lon])
+        .addTo(map)
+        .bindPopup("You are here")
+        .openPopup();
+
+      // Draw 5km radius circle
+      L.circle([lat, lon], {
+        radius: 5000, // in meters
+        color: "blue",
+        fillColor: "#3399ff",
+        fillOpacity: 0.3
+      }).addTo(map);
+    }, (err) => {
+      alert("Could not get your location: " + err.message);
+    });
+  } else {
+    alert("Geolocation is not supported by your browser.");
+  }
+</script>
+
+</body>
+</html>

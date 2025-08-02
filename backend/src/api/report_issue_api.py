@@ -3,9 +3,9 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from backend.src.api_management.report_issue_management.schemas import IssueCreate, IssueOut
-from backend.src.database import models
-from backend.src.database.database import get_db
+from src.api_management.report_issue_management.schemas import IssueCreate, IssueOut
+from src.database import models
+from src.database.database import get_db
 
 router = APIRouter()
 
