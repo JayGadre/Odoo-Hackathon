@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -12,18 +12,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Card } from "@/components/ui/card"
-import { MapPin, Camera, Upload } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { Issue } from "@/types/issue"
 
-export function IssueForm() {
+// ✅ Correct type for form data
+type IssueFormFields = Omit<Issue, "id" | "createdAt" | "votes" | "comments" | "history">
+
+type IssueFormProps = {
+  onSubmit: (newIssue: IssueFormFields) => void
+}
+
+export function IssueForm({ onSubmit }: IssueFormProps) {
   const { toast } = useToast()
-  const [formData, setFormData] = useState({
+
+  const [formData, setFormData] = useState<IssueFormFields>({
     title: "",
     description: "",
     category: "",
-    location: "",
+    latitude: 0,
+    longitude: 0,
+    status: "reported",
   })
+
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const categories = [
@@ -36,32 +46,53 @@ export function IssueForm() {
     "Other",
   ]
 
+  // ✅ Fetch live location on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setFormData((prev) => ({
+            ...prev,
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          }))
+        },
+        (err) => {
+          toast({
+            title: "Location Error",
+            description: "Unable to access your location. Please allow location access.",
+            variant: "destructive",
+          })
+        }
+      )
+    } else {
+      toast({
+        title: "Geolocation not supported",
+        description: "Your browser doesn't support geolocation.",
+        variant: "destructive",
+      })
+    }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
     try {
-            const response = await fetch("http://localhost:8003/report/report-issue", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to report issue")
-      }
+      onSubmit(formData)
 
       toast({
-        title: "Issue Reported",
-        description: "Your issue has been successfully reported.",
+        title: "Issue Submitted",
+        description: "Thanks for doing your civic duty 🫡",
       })
+
       setFormData({
         title: "",
         description: "",
         category: "",
-        location: "",
+        latitude: 0,
+        longitude: 0,
+        status: "reported",
       })
     } catch (error) {
       toast({
@@ -130,17 +161,26 @@ export function IssueForm() {
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="location">Location *</Label>
-          <Input
-            id="location"
-            placeholder="Enter a location"
-            value={formData.location}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, location: e.target.value }))
-            }
-            required
-          />
+        {/* Optional: Show lat/lng as read-only for transparency */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="latitude">Latitude</Label>
+            <Input
+              id="latitude"
+              type="number"
+              value={formData.latitude}
+              readOnly
+            />
+          </div>
+          <div>
+            <Label htmlFor="longitude">Longitude</Label>
+            <Input
+              id="longitude"
+              type="number"
+              value={formData.longitude}
+              readOnly
+            />
+          </div>
         </div>
 
         <Button

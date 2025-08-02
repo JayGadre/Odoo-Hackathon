@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
-import type { Issue } from "@/lib/mock-data"
+import type { Issue } from "@/types/issue" 
 
 interface MapViewProps {
   issues: Issue[]
@@ -17,65 +17,54 @@ export function MapView({ issues, onIssueSelect, selectedIssue }: MapViewProps) 
   const userMarker = useRef<L.Marker | null>(null)
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
 
-  // Get user's location
   useEffect(() => {
     if (!navigator.geolocation) {
       console.warn("Geolocation not supported.")
-      setUserLocation([28.6139, 77.2090]) // Fallback: Delhi
+      setUserLocation([28.6139, 77.2090])
       return
     }
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setUserLocation([pos.coords.latitude, pos.coords.longitude])
-      },
+      (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
       (err) => {
         console.error("Geolocation error:", err)
-        setUserLocation([28.6139, 77.2090]) // fallback
+        setUserLocation([28.6139, 77.2090])
       }
     )
   }, [])
 
-  // Initialize map
   useEffect(() => {
     if (!mapRef.current || mapInstance.current || !userLocation) return
 
-    const leafletMap = L.map(mapRef.current).setView(userLocation, 13)
+    const map = L.map(mapRef.current).setView(userLocation, 13)
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(leafletMap)
+    }).addTo(map)
 
-    // Add user location marker
     userMarker.current = L.marker(userLocation, {
       icon: L.icon({
-        iconUrl: "https://cdn-icons-png.flaticon.com/512/64/64113.png", // optional custom icon
+        iconUrl: "https://cdn-icons-png.flaticon.com/512/64/64113.png",
         iconSize: [32, 32],
         iconAnchor: [16, 32],
       }),
-    })
-      .addTo(leafletMap)
-      .bindPopup("📍 You are here")
-      .openPopup()
+    }).addTo(map).bindPopup("📍 You are here").openPopup()
 
-    // 5km radius
     L.circle(userLocation, {
       radius: 5000,
       color: "blue",
       fillColor: "#3b82f6",
       fillOpacity: 0.15,
-    }).addTo(leafletMap)
+    }).addTo(map)
 
-    mapInstance.current = leafletMap
+    mapInstance.current = map
   }, [userLocation])
 
-  // Render issue markers
   useEffect(() => {
     if (!mapInstance.current) return
 
     const map = mapInstance.current
 
-    // Remove old markers (except tile layer, circle, and user marker)
     map.eachLayer((layer) => {
       if (
         (layer as L.Marker).getLatLng &&
@@ -88,13 +77,15 @@ export function MapView({ issues, onIssueSelect, selectedIssue }: MapViewProps) 
     })
 
     issues.forEach((issue) => {
-      const marker = L.marker([issue.location.lat, issue.location.lng])
+      const position: [number, number] = [issue.latitude, issue.longitude]
+
+      const marker = L.marker(position)
         .addTo(map)
         .on("click", () => onIssueSelect(issue))
 
       if (selectedIssue?.id === issue.id) {
         marker.bindPopup(`<b>${issue.title}</b>`).openPopup()
-        map.setView([issue.location.lat, issue.location.lng], 14)
+        map.setView(position, 14)
       }
     })
   }, [issues, selectedIssue, onIssueSelect])

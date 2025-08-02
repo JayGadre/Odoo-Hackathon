@@ -5,9 +5,33 @@ import { MapPin, Users } from "lucide-react"
 import { MapView } from "@/components/map-view"
 import { IssueForm } from "@/components/issue-form"
 import { FilterSidebar } from "@/components/filter-sidebar"
-import { mockIssues, type Issue } from "@/lib/mock-data"
+
+import type { Issue } from "@/types/issue"
 import { toast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
+
+export const mockIssues: Issue[] = [
+  {
+    id: "1",
+    title: "Broken streetlight",
+    description: "The light near my house is broken.",
+    category: "Street Lighting",
+    status: "reported",
+    createdAt: new Date().toISOString(),
+    latitude: 28.6139,
+    longitude: 77.2090,
+    votes: 0,
+    comments: [],
+    history: [
+      {
+        status: "reported",
+        timestamp: new Date().toISOString(),
+        note: "Reported by user",
+      },
+    ],
+  },
+  // Add more issues if needed
+]
 
 export default function CivicTrack() {
   const [issues, setIssues] = useState<Issue[]>(mockIssues)
