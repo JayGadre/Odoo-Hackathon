@@ -1,14 +1,13 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Issue } from "@/types/issue"
-import Link from "next/link"
+import { useEffect, useState } from "react";
+import { Issue } from "@/types/issue";
+import Link from "next/link";
 
 export default function IssuesPage() {
-  const [issues, setIssues] = useState<Issue[]>([])
+  const [issues, setIssues] = useState<Issue[]>([]);
 
   useEffect(() => {
-    // TEMP MOCK DATA — replace with API call later
     const mockIssues: Issue[] = [
       {
         id: "1",
@@ -18,7 +17,7 @@ export default function IssuesPage() {
         status: "reported",
         createdAt: new Date().toISOString(),
         latitude: 28.6139,
-        longitude: 77.2090,
+        longitude: 77.209,
         votes: 0,
         comments: [],
         history: [
@@ -29,9 +28,9 @@ export default function IssuesPage() {
           },
         ],
       },
-    ]
-    setIssues(mockIssues)
-  }, [])
+    ];
+    setIssues(mockIssues);
+  }, []);
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
@@ -58,14 +57,11 @@ export default function IssuesPage() {
         )}
 
         <div className="mt-6">
-          <Link
-            href="/"
-            className="text-blue-600 hover:underline text-sm inline-block"
-          >
+          <Link href="/main" className="text-blue-600 hover:underline text-sm inline-block">
             ← Back to CivicTrack
           </Link>
         </div>
       </div>
     </div>
-  )
+  );
 }
