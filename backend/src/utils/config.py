@@ -1,10 +1,10 @@
+import secrets
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "CivicTrack"
-    API_PREFIX: str = "/api/v1"
 
-    SECRET_KEY: str
+    SECRET_KEY: str = secrets.token_urlsafe(32)  # auto-generate if not set
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
