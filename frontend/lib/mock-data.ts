@@ -1,19 +1,12 @@
-export interface Issue {
+export type Issue = {
   id: string
   title: string
   description: string
   category: string
-  status: "reported" | "in-progress" | "resolved"
-  location: {
-    lat: number
-    lng: number
-  }
-  author: string
+  status: string
+  latitude: number
+  longitude: number
   createdAt: string
-  votes: number
-  photo?: string
-  comments: Comment[]
-  history: StatusHistory[]
 }
 
 export interface Comment {
@@ -228,3 +221,4 @@ export const mockIssues: Issue[] = [
     ],
   },
 ]
+
