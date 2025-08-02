@@ -1,6 +1,8 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
+import L from "leaflet"
+import "leaflet/dist/leaflet.css"
 import type { Issue } from "@/lib/mock-data"
 
 interface MapViewProps {
@@ -10,159 +12,115 @@ interface MapViewProps {
 }
 
 export function MapView({ issues, onIssueSelect, selectedIssue }: MapViewProps) {
-  const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<any>(null)
-  const markersRef = useRef<any[]>([])
+  const mapRef = useRef<HTMLDivElement | null>(null)
+  const mapInstance = useRef<L.Map | null>(null)
+  const userMarker = useRef<L.Marker | null>(null)
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
 
+  // Get user's location
   useEffect(() => {
-    // Initialize map when component mounts
-    const initMap = async () => {
-      if (typeof window === "undefined" || !mapRef.current) return
-
-      // Dynamically import Leaflet to avoid SSR issues
-      const L = (await import("leaflet")).default
-
-      // Fix for default markers in Leaflet
-      delete (L.Icon.Default.prototype as any)._getIconUrl
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-      })
-
-      // Initialize map centered on a default location (San Francisco)
-      const map = L.map(mapRef.current).setView([37.7749, -122.4194], 13)
-
-      // Add tile layer
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors",
-      }).addTo(map)
-
-      mapInstanceRef.current = map
+    if (!navigator.geolocation) {
+      console.warn("Geolocation not supported.")
+      setUserLocation([28.6139, 77.2090]) // Fallback: Delhi
+      return
     }
 
-    initMap()
-
-    // Cleanup function
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove()
-        mapInstanceRef.current = null
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation([pos.coords.latitude, pos.coords.longitude])
+      },
+      (err) => {
+        console.error("Geolocation error:", err)
+        setUserLocation([28.6139, 77.2090]) // fallback
       }
-    }
+    )
   }, [])
 
+  // Initialize map
   useEffect(() => {
-    // Update markers when issues change
-    const updateMarkers = async () => {
-      if (!mapInstanceRef.current || typeof window === "undefined") return
+    if (!mapRef.current || mapInstance.current || !userLocation) return
 
-      const L = (await import("leaflet")).default
+    const leafletMap = L.map(mapRef.current).setView(userLocation, 13)
 
-      // Clear existing markers
-      markersRef.current.forEach((marker) => {
-        mapInstanceRef.current.removeLayer(marker)
-      })
-      markersRef.current = []
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(leafletMap)
 
-      // Add new markers
-      issues.forEach((issue) => {
-        const color = getStatusColor(issue.status)
+    // Add user location marker
+    userMarker.current = L.marker(userLocation, {
+      icon: L.icon({
+        iconUrl: "https://cdn-icons-png.flaticon.com/512/64/64113.png", // optional custom icon
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+      }),
+    })
+      .addTo(leafletMap)
+      .bindPopup("📍 You are here")
+      .openPopup()
 
-        // Create custom icon based on status
-        const customIcon = L.divIcon({
-          className: "custom-marker",
-          html: `
-            <div class="w-6 h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white text-xs font-bold" 
-                 style="background-color: ${color}">
-              ${getStatusIcon(issue.status)}
-            </div>
-          `,
-          iconSize: [24, 24],
-          iconAnchor: [12, 12],
-        })
+    // 5km radius
+    L.circle(userLocation, {
+      radius: 5000,
+      color: "blue",
+      fillColor: "#3b82f6",
+      fillOpacity: 0.15,
+    }).addTo(leafletMap)
 
-        const marker = L.marker([issue.location.lat, issue.location.lng], {
-          icon: customIcon,
-        })
-          .bindPopup(`
-          <div class="p-2">
-            <h3 class="font-semibold text-sm mb-1">${issue.title}</h3>
-            <p class="text-xs text-gray-600 mb-2">${issue.description.substring(0, 100)}...</p>
-            <div class="flex items-center justify-between">
-              <span class="text-xs px-2 py-1 rounded-full" style="background-color: ${color}20; color: ${color}">
-                ${issue.status.replace("-", " ").toUpperCase()}
-              </span>
-              <span class="text-xs text-gray-500">${issue.votes} votes</span>
-            </div>
-          </div>
-        `)
-          .on("click", () => onIssueSelect(issue))
-          .addTo(mapInstanceRef.current)
+    mapInstance.current = leafletMap
+  }, [userLocation])
 
-        markersRef.current.push(marker)
-      })
-    }
+  // Render issue markers
+  useEffect(() => {
+    if (!mapInstance.current) return
 
-    updateMarkers()
-  }, [issues, onIssueSelect])
+    const map = mapInstance.current
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "reported":
-        return "#f59e0b" // orange
-      case "in-progress":
-        return "#3b82f6" // blue
-      case "resolved":
-        return "#10b981" // green
-      default:
-        return "#6b7280" // gray
-    }
-  }
+    // Remove old markers (except tile layer, circle, and user marker)
+    map.eachLayer((layer) => {
+      if (
+        (layer as L.Marker).getLatLng &&
+        !(layer instanceof L.TileLayer) &&
+        !(layer instanceof L.Circle) &&
+        layer !== userMarker.current
+      ) {
+        map.removeLayer(layer)
+      }
+    })
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "reported":
-        return "!"
-      case "in-progress":
-        return "⟳"
-      case "resolved":
-        return "✓"
-      default:
-        return "?"
-    }
-  }
+    issues.forEach((issue) => {
+      const marker = L.marker([issue.location.lat, issue.location.lng])
+        .addTo(map)
+        .on("click", () => onIssueSelect(issue))
+
+      if (selectedIssue?.id === issue.id) {
+        marker.bindPopup(`<b>${issue.title}</b>`).openPopup()
+        map.setView([issue.location.lat, issue.location.lng], 14)
+      }
+    })
+  }, [issues, selectedIssue, onIssueSelect])
 
   return (
-    <>
-      <div ref={mapRef} className="w-full h-full" />
+    <div className="w-full h-full relative">
+      <div ref={mapRef} className="absolute inset-0 z-0 rounded-lg overflow-hidden" />
 
-      {/* Map Legend */}
+      {/* Legend */}
       <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-3 z-[1000]">
         <h4 className="text-sm font-semibold mb-2">Issue Status</h4>
         <div className="space-y-1">
           <div className="flex items-center text-xs">
-            <div className="w-3 h-3 rounded-full bg-orange-500 mr-2"></div>
+            <div className="w-3 h-3 rounded-full bg-orange-500 mr-2" />
             <span>Reported</span>
           </div>
           <div className="flex items-center text-xs">
-            <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+            <div className="w-3 h-3 rounded-full bg-blue-500 mr-2" />
             <span>In Progress</span>
           </div>
           <div className="flex items-center text-xs">
-            <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+            <div className="w-3 h-3 rounded-full bg-green-500 mr-2" />
             <span>Resolved</span>
           </div>
         </div>
       </div>
-
-      {/* Load Leaflet CSS */}
-      <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
-        integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
-        crossOrigin=""
-      />
-    </>
+    </div>
   )
 }
